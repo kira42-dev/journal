@@ -7,24 +7,34 @@ async function renderGroups(container) {
   html += '</div>';
 
   html += '<div class="filters">';
-  html += '<div class="filter-group"><label>Колледж</label><select id="collegeFilter" onchange="renderGroups(document.getElementById(\'mainContent\'))"><option value="">Все</option></select></div>';
+  html += '<div class="filter-group"><label>Колледж</label><select id="collegeFilter"><option value="">Все</option></select></div>';
   html += '</div>';
 
   html += '<div id="groupsTable"><p class="empty-state">Загрузка...</p></div>';
   container.innerHTML = html;
 
+  document.getElementById('collegeFilter').addEventListener('change', loadGroupsTable);
+  await loadGroupsTable();
+}
+
+async function loadGroupsTable() {
+  const select = document.getElementById('collegeFilter');
   try {
     const colleges = await apiGet('/colleges');
-    const select = document.getElementById('collegeFilter');
+    const currentVal = select.value;
     colleges.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.id;
-      opt.textContent = c.name;
-      select.appendChild(opt);
+      if (!select.querySelector(`option[value="${c.id}"]`)) {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        select.appendChild(opt);
+      }
     });
+    select.value = currentVal;
 
     const collegeId = select.value;
     const url = collegeId ? `/groups?college_id=${collegeId}` : '/groups';
+    const role = getRole();
     const groups = await apiGet(url);
 
     const tbody = groups.map(g => `
@@ -34,9 +44,9 @@ async function renderGroups(container) {
         <td>${g.headman_name || '—'}</td>
         <td>
           ${role === 'teacher' ? `
-            <button class="btn btn-sm btn-outline" onclick="showEditGroupModal(${g.id}, '${escapeAttr(g.name)}')">✎</button>
-            <button class="btn btn-sm btn-outline" onclick="showSetHeadmanModal(${g.id})">Назначить старосту</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteGroup(${g.id})">✕</button>
+            <button class="btn btn-sm btn-outline" onclick="showEditGroupModal(${escapeAttr(g.id)}, '${escapeAttr(g.name)}')">✎</button>
+            <button class="btn btn-sm btn-outline" onclick="showSetHeadmanModal(${escapeAttr(g.id)})">Назначить старосту</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteGroup(${escapeAttr(g.id)})">✕</button>
           ` : ''}
         </td>
       </tr>
@@ -54,40 +64,39 @@ async function renderGroups(container) {
 }
 
 function showAddGroupModal() {
-  loadGroupCollegeSelect().then(() => {
-    createModal('groupModal', 'Добавить группу', `
-      <form id="groupForm">
-        <div class="form-group">
-          <label>Колледж</label>
-          <select id="gCollegeId" required></select>
-        </div>
-        <div class="form-group">
-          <label>Название</label>
-          <input type="text" id="gName" required>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-outline" onclick="closeModal('groupModal')">Отмена</button>
-          <button type="submit" class="btn btn-primary">Сохранить</button>
-        </div>
-      </form>
-    `);
-    openModal('groupModal');
+  createModal('groupModal', 'Добавить группу', `
+    <form id="groupForm">
+      <div class="form-group">
+        <label>Колледж</label>
+        <select id="gCollegeId" required></select>
+      </div>
+      <div class="form-group">
+        <label>Название</label>
+        <input type="text" id="gName" required>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal('groupModal')">Отмена</button>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+      </div>
+    </form>
+  `);
+  openModal('groupModal');
+  loadGroupCollegeSelect();
 
-    document.getElementById('groupForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const data = {
-        college_id: Number(document.getElementById('gCollegeId').value),
-        name: document.getElementById('gName').value.trim()
-      };
-      if (!data.name) return;
-      try {
-        await apiPost('/groups', data);
-        closeModal('groupModal');
-        renderGroups(document.getElementById('mainContent'));
-      } catch (err) {
-        alert(err.error || 'Ошибка');
-      }
-    });
+  document.getElementById('groupForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+      college_id: Number(document.getElementById('gCollegeId').value),
+      name: document.getElementById('gName').value.trim()
+    };
+    if (!data.name) return;
+    try {
+      await apiPost('/groups', data);
+      closeModal('groupModal');
+      renderGroups(document.getElementById('mainContent'));
+    } catch (err) {
+      alert(err.error || 'Ошибка');
+    }
   });
 }
 
@@ -129,7 +138,7 @@ async function showSetHeadmanModal(groupId) {
           <label>Староста</label>
           <select id="hStudentId">
             <option value="">— Не назначать —</option>
-            ${students.map(s => `<option value="${s.id}">${s.full_name}</option>`).join('')}
+            ${students.map(s => `<option value="${s.id}"${group.headman_id === s.id ? ' selected' : ''}>${s.full_name}</option>`).join('')}
           </select>
         </div>
         <div class="modal-actions">

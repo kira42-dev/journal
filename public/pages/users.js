@@ -33,27 +33,81 @@ async function renderUsers(container) {
 }
 
 function showAddUserModal() {
-  loadStudentsForUsers().then(() => {
-    createModal('userModal', 'Добавить пользователя', `
+  createModal('userModal', 'Добавить пользователя', `
+    <form id="userForm">
+      <div class="form-group">
+        <label>Логин</label>
+        <input type="text" id="uUsername" required>
+      </div>
+      <div class="form-group">
+        <label>Пароль</label>
+        <input type="password" id="uPassword" required>
+      </div>
+      <div class="form-group">
+        <label>Роль</label>
+        <select id="uRole" onchange="toggleUserStudentField()">
+          <option value="teacher">Преподаватель</option>
+          <option value="headman">Староста</option>
+        </select>
+      </div>
+      <div class="form-group" id="uStudentGroup">
+        <label>Студент</label>
+        <select id="uStudentId"><option value="">— Выберите студента —</option></select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal('userModal')">Отмена</button>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+      </div>
+    </form>
+  `);
+  openModal('userModal');
+  loadStudentsForUsers();
+  toggleUserStudentField();
+
+  document.getElementById('userForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+      username: document.getElementById('uUsername').value.trim(),
+      password: document.getElementById('uPassword').value,
+      role: document.getElementById('uRole').value,
+      student_id: document.getElementById('uRole').value === 'headman' ? Number(document.getElementById('uStudentId').value) : null
+    };
+    if (!data.username || !data.password) return;
+    if (data.role === 'headman' && !data.student_id) { alert('Выберите студента'); return; }
+    try {
+      await apiPost('/users', data);
+      closeModal('userModal');
+      renderUsers(document.getElementById('mainContent'));
+    } catch (err) {
+      alert(err.error || 'Ошибка');
+    }
+  });
+}
+
+function showEditUserModal(id) {
+  apiGet('/users').then(async users => {
+    const user = users.find(u => u.id === id);
+    if (!user) return;
+    createModal('userModal', 'Редактировать пользователя', `
       <form id="userForm">
         <div class="form-group">
           <label>Логин</label>
-          <input type="text" id="uUsername" required>
+          <input type="text" id="uUsername" value="${user.username}" required>
         </div>
         <div class="form-group">
-          <label>Пароль</label>
-          <input type="password" id="uPassword" required>
+          <label>Новый пароль (оставьте пустым для сохранения текущего)</label>
+          <input type="password" id="uPassword">
         </div>
         <div class="form-group">
           <label>Роль</label>
           <select id="uRole" onchange="toggleUserStudentField()">
-            <option value="teacher">Преподаватель</option>
-            <option value="headman">Староста</option>
+            <option value="teacher" ${user.role === 'teacher' ? 'selected' : ''}>Преподаватель</option>
+            <option value="headman" ${user.role === 'headman' ? 'selected' : ''}>Староста</option>
           </select>
         </div>
         <div class="form-group" id="uStudentGroup">
           <label>Студент</label>
-          <select id="uStudentId"><option value="">— Выберите студента —</option></select>
+          <select id="uStudentId"><option value="">— Не выбран —</option></select>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn btn-outline" onclick="closeModal('userModal')">Отмена</button>
@@ -62,80 +116,24 @@ function showAddUserModal() {
       </form>
     `);
     openModal('userModal');
+    await loadStudentsForUsers();
+    if (user.student_id) document.getElementById('uStudentId').value = user.student_id;
     toggleUserStudentField();
 
     document.getElementById('userForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const data = {
-        username: document.getElementById('uUsername').value.trim(),
-        password: document.getElementById('uPassword').value,
-        role: document.getElementById('uRole').value,
-        student_id: document.getElementById('uRole').value === 'headman' ? Number(document.getElementById('uStudentId').value) : null
-      };
-      if (!data.username || !data.password) return;
-      if (data.role === 'headman' && !data.student_id) { alert('Выберите студента'); return; }
+      const data = { username: document.getElementById('uUsername').value.trim() };
+      const pwd = document.getElementById('uPassword').value;
+      if (pwd) data.password = pwd;
+      data.role = document.getElementById('uRole').value;
+      data.student_id = data.role === 'headman' ? Number(document.getElementById('uStudentId').value) : null;
       try {
-        await apiPost('/users', data);
+        await apiPut(`/users/${id}`, data);
         closeModal('userModal');
         renderUsers(document.getElementById('mainContent'));
       } catch (err) {
         alert(err.error || 'Ошибка');
       }
-    });
-  });
-}
-
-function showEditUserModal(id) {
-  loadStudentsForUsers().then(() => {
-    apiGet('/users').then(users => {
-      const user = users.find(u => u.id === id);
-      if (!user) return;
-      createModal('userModal', 'Редактировать пользователя', `
-        <form id="userForm">
-          <div class="form-group">
-            <label>Логин</label>
-            <input type="text" id="uUsername" value="${user.username}" required>
-          </div>
-          <div class="form-group">
-            <label>Новый пароль (оставьте пустым для сохранения текущего)</label>
-            <input type="password" id="uPassword">
-          </div>
-          <div class="form-group">
-            <label>Роль</label>
-            <select id="uRole" onchange="toggleUserStudentField()">
-              <option value="teacher" ${user.role === 'teacher' ? 'selected' : ''}>Преподаватель</option>
-              <option value="headman" ${user.role === 'headman' ? 'selected' : ''}>Староста</option>
-            </select>
-          </div>
-          <div class="form-group" id="uStudentGroup">
-            <label>Студент</label>
-            <select id="uStudentId"><option value="">— Не выбран —</option></select>
-          </div>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-outline" onclick="closeModal('userModal')">Отмена</button>
-            <button type="submit" class="btn btn-primary">Сохранить</button>
-          </div>
-        </form>
-      `);
-      openModal('userModal');
-      if (user.student_id) document.getElementById('uStudentId').value = user.student_id;
-      toggleUserStudentField();
-
-      document.getElementById('userForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const data = { username: document.getElementById('uUsername').value.trim() };
-        const pwd = document.getElementById('uPassword').value;
-        if (pwd) data.password = pwd;
-        data.role = document.getElementById('uRole').value;
-        data.student_id = data.role === 'headman' ? Number(document.getElementById('uStudentId').value) : null;
-        try {
-          await apiPut(`/users/${id}`, data);
-          closeModal('userModal');
-          renderUsers(document.getElementById('mainContent'));
-        } catch (err) {
-          alert(err.error || 'Ошибка');
-        }
-      });
     });
   });
 }
