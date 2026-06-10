@@ -76,7 +76,7 @@ async function loadGradeTable() {
     html += '</div>';
 
     const role = getRole();
-    html += `<div class="table-container" id="gradesTableInner"><table>
+    html += `<div class="table-container"><table>
       <thead><tr>
         <th>Студент</th>
         <th>Присутствие</th>
@@ -102,7 +102,6 @@ async function loadGradeTable() {
     `).join('');
 
     html += '</tbody></table></div>';
-    enableTableSort('gradesTableInner');
 
     if (role === 'teacher') {
       const groupId = document.getElementById('groupFilter').value;

@@ -24,11 +24,10 @@ async function renderColleges(container) {
 
     document.getElementById('collegesTable').innerHTML = colleges.length === 0
       ? '<p class="empty-state">Нет колледжей</p>'
-      : `<div class="table-container" id="collegesTableInner"><table>
+      : `<div class="table-container"><table>
           <thead><tr><th>ID</th><th>Название</th><th>Действия</th></tr></thead>
           <tbody>${tbody}</tbody>
         </table></div>`;
-    enableTableSort('collegesTableInner');
   } catch (err) {
     document.getElementById('collegesTable').innerHTML = `<p class="error-message">${err.error || 'Ошибка загрузки'}</p>`;
   }
