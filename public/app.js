@@ -123,29 +123,29 @@ function renderSidebar() {
 
   if (role === 'teacher') {
     items = [
-      { label: 'Колледжи', page: 'colleges' },
-      { label: 'Предметы', page: 'subjects' },
-      { label: 'Темы', page: 'topics' },
-      { label: 'Группы', page: 'groups' },
-      { label: 'Студенты', page: 'students' },
-      { label: 'Занятия', page: 'lessons' },
-      { label: 'Журнал', page: 'grades' },
-      { label: 'Отчёты', page: 'reports' },
-      { label: 'Пользователи', page: 'users' }
+      { label: 'Колледжи', page: 'colleges', icon: '\u{1F3EB}' },
+      { label: 'Предметы', page: 'subjects', icon: '\u{1F4DA}' },
+      { label: 'Темы', page: 'topics', icon: '\u{1F4DD}' },
+      { label: 'Группы', page: 'groups', icon: '\u{1F465}' },
+      { label: 'Студенты', page: 'students', icon: '\u{1F393}' },
+      { label: 'Занятия', page: 'lessons', icon: '\u{1F4C5}' },
+      { label: 'Журнал', page: 'grades', icon: '\u{1F4CB}' },
+      { label: 'Отчёты', page: 'reports', icon: '\u{1F4CA}' },
+      { label: 'Пользователи', page: 'users', icon: '\u{1F464}' }
     ];
   } else if (role === 'headman') {
     items = [
-      { label: 'Студенты', page: 'students' },
-      { label: 'Занятия', page: 'lessons' },
-      { label: 'Журнал', page: 'grades' },
-      { label: 'Отчёты', page: 'reports' }
+      { label: 'Студенты', page: 'students', icon: '\u{1F393}' },
+      { label: 'Занятия', page: 'lessons', icon: '\u{1F4C5}' },
+      { label: 'Журнал', page: 'grades', icon: '\u{1F4CB}' },
+      { label: 'Отчёты', page: 'reports', icon: '\u{1F4CA}' }
     ];
   }
 
   const ul = document.createElement('ul');
   items.forEach(item => {
     const li = document.createElement('li');
-    li.textContent = item.label;
+    li.innerHTML = `<span>${item.icon || ''}</span> ${item.label}`;
     li.dataset.page = item.page;
     li.addEventListener('click', () => {
       document.querySelectorAll('#sidebar li').forEach(el => el.classList.remove('active'));
