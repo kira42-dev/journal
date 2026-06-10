@@ -61,12 +61,13 @@ async function renderLessons(container) {
 
     document.getElementById('lessonsTable').innerHTML = lessons.length === 0
       ? '<p class="empty-state">Нет занятий</p>'
-      : `<div class="table-container"><table>
+      : `<div class="table-container" id="lessonsTableInner"><table>
           <thead><tr>
             <th>ID</th><th>Группа</th><th>Предмет</th><th>Тема</th><th>Дата</th><th>Часы</th><th>Тип</th><th>Действия</th>
           </tr></thead>
           <tbody>${tbody}</tbody>
         </table></div>`;
+    enableTableSort('lessonsTableInner');
   } catch (err) {
     document.getElementById('lessonsTable').innerHTML = `<p class="error-message">${err.error || 'Ошибка загрузки'}</p>`;
   }

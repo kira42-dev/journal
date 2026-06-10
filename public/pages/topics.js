@@ -43,10 +43,11 @@ async function renderTopics(container) {
 
     document.getElementById('topicsTable').innerHTML = topics.length === 0
       ? '<p class="empty-state">Нет тем</p>'
-      : `<div class="table-container"><table>
+      : `<div class="table-container" id="topicsTableInner"><table>
           <thead><tr><th>ID</th><th>Название</th><th>Порядок</th><th>Действия</th></tr></thead>
           <tbody>${tbody}</tbody>
         </table></div>`;
+    enableTableSort('topicsTableInner');
   } catch (err) {
     document.getElementById('topicsTable').innerHTML = `<p class="error-message">${err.error || 'Ошибка загрузки'}</p>`;
   }

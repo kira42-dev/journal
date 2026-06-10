@@ -49,12 +49,13 @@ async function renderSubjects(container) {
 
     document.getElementById('subjectsTable').innerHTML = subjects.length === 0
       ? '<p class="empty-state">Нет предметов</p>'
-      : `<div class="table-container"><table>
+      : `<div class="table-container" id="subjectsTableInner"><table>
           <thead><tr>
-            <th>ID</th><th>Название</th><th>Колледж ID</th><th>Лекции (ч)</th><th>Практика (ч)</th><th>Всего (ч)</th><th>Действия</th>
+            <th>ID</th><th>Название</th><th>Колледж</th><th>Лекции (ч)</th><th>Практика (ч)</th><th>Всего (ч)</th><th>Действия</th>
           </tr></thead>
           <tbody>${tbody}</tbody>
         </table></div>`;
+    enableTableSort('subjectsTableInner');
   } catch (err) {
     document.getElementById('subjectsTable').innerHTML = `<p class="error-message">${err.error || 'Ошибка загрузки'}</p>`;
   }

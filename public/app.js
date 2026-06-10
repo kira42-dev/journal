@@ -81,6 +81,55 @@ function escapeAttr(str) {
   return String(str).replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function enableTableSort(tableId) {
+  const container = document.getElementById(tableId);
+  if (!container) return;
+
+  const searchBar = document.createElement('div');
+  searchBar.className = 'table-search';
+  searchBar.innerHTML = '<input type="text" placeholder="Поиск по таблице..." class="search-input">';
+  container.parentNode.insertBefore(searchBar, container);
+
+  const input = searchBar.querySelector('.search-input');
+  input.addEventListener('input', () => {
+    const val = input.value.toLowerCase().trim();
+    const rows = container.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+      const text = Array.from(row.querySelectorAll('td')).map(td => td.textContent.toLowerCase()).join(' ');
+      row.style.display = val && !text.includes(val) ? 'none' : '';
+    });
+  });
+
+  const headers = container.querySelectorAll('thead th');
+  let sortDir = {};
+  headers.forEach((th, idx) => {
+    const text = th.textContent.trim();
+    if (text === 'Действия' || !text) return;
+    th.style.cursor = 'pointer';
+    th.title = 'Сортировать';
+    th.addEventListener('click', () => {
+      const dir = sortDir[idx] === 'asc' ? 'desc' : 'asc';
+      sortDir = {};
+      sortDir[idx] = dir;
+      headers.forEach(h => { h.classList.remove('sort-asc', 'sort-desc'); });
+      th.classList.add('sort-' + dir);
+
+      const tbody = container.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const multiplier = dir === 'asc' ? 1 : -1;
+      rows.sort((a, b) => {
+        const aVal = (a.children[idx]?.textContent || '').trim();
+        const bVal = (b.children[idx]?.textContent || '').trim();
+        const aNum = parseFloat(aVal);
+        const bNum = parseFloat(bVal);
+        if (!isNaN(aNum) && !isNaN(bNum)) return (aNum - bNum) * multiplier;
+        return aVal.localeCompare(bVal, 'ru') * multiplier;
+      });
+      rows.forEach(r => tbody.appendChild(r));
+    });
+  });
+}
+
 function openModal(id) {
   document.getElementById(id).classList.add('open');
 }

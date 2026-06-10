@@ -44,10 +44,11 @@ async function renderGroups(container) {
 
     document.getElementById('groupsTable').innerHTML = groups.length === 0
       ? '<p class="empty-state">Нет групп</p>'
-      : `<div class="table-container"><table>
+      : `<div class="table-container" id="groupsTableInner"><table>
           <thead><tr><th>ID</th><th>Название</th><th>Староста</th><th>Действия</th></tr></thead>
           <tbody>${tbody}</tbody>
         </table></div>`;
+    enableTableSort('groupsTableInner');
   } catch (err) {
     document.getElementById('groupsTable').innerHTML = `<p class="error-message">${err.error || 'Ошибка загрузки'}</p>`;
   }

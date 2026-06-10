@@ -23,10 +23,11 @@ async function renderUsers(container) {
 
     document.getElementById('usersTable').innerHTML = users.length === 0
       ? '<p class="empty-state">Нет пользователей</p>'
-      : `<div class="table-container"><table>
+      : `<div class="table-container" id="usersTableInner"><table>
           <thead><tr><th>ID</th><th>Логин</th><th>Роль</th><th>Студент</th><th>Создан</th><th>Действия</th></tr></thead>
           <tbody>${tbody}</tbody>
         </table></div>`;
+    enableTableSort('usersTableInner');
   } catch (err) {
     document.getElementById('usersTable').innerHTML = `<p class="error-message">${err.error || 'Ошибка загрузки'}</p>`;
   }

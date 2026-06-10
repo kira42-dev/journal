@@ -46,10 +46,11 @@ async function renderStudents(container) {
 
     document.getElementById('studentsTable').innerHTML = students.length === 0
       ? '<p class="empty-state">Нет студентов</p>'
-      : `<div class="table-container"><table>
-          <thead><tr><th>ID</th><th>ФИО</th><th>Группа ID</th><th>Действия</th></tr></thead>
+      : `<div class="table-container" id="studentsTableInner"><table>
+          <thead><tr><th>ID</th><th>ФИО</th><th>Группа</th><th>Действия</th></tr></thead>
           <tbody>${tbody}</tbody>
         </table></div>`;
+    enableTableSort('studentsTableInner');
   } catch (err) {
     document.getElementById('studentsTable').innerHTML = `<p class="error-message">${err.error || 'Ошибка загрузки'}</p>`;
   }

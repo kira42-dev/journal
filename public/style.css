@@ -375,6 +375,37 @@ tr:hover {
   color: var(--text-secondary);
 }
 
+/* Search & Sort */
+.table-search {
+  margin-bottom: 8px;
+}
+
+.search-input {
+  width: 100%;
+  max-width: 320px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+th.sort-asc::after {
+  content: ' ▲';
+  font-size: 0.7rem;
+}
+
+th.sort-desc::after {
+  content: ' ▼';
+  font-size: 0.7rem;
+}
+
 /* Stats card */
 .stats-grid {
   display: grid;
