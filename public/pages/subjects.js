@@ -61,59 +61,57 @@ async function renderSubjects(container) {
 }
 
 function showAddSubjectModal() {
-  loadCollegeSelect().then(() => {
-    createModal('subjectModal', 'Добавить предмет', `
-      <form id="subjectForm">
+  createModal('subjectModal', 'Добавить предмет', `
+    <form id="subjectForm">
+      <div class="form-group">
+        <label>Колледж</label>
+        <select id="sCollegeId" required></select>
+      </div>
+      <div class="form-group">
+        <label>Название</label>
+        <input type="text" id="sName" required>
+      </div>
+      <div class="form-row">
         <div class="form-group">
-          <label>Колледж</label>
-          <select id="sCollegeId" required></select>
+          <label>Лекции (часы)</label>
+          <input type="number" id="sLecture" value="0" min="0">
         </div>
         <div class="form-group">
-          <label>Название</label>
-          <input type="text" id="sName" required>
+          <label>Практика (часы)</label>
+          <input type="number" id="sPractice" value="0" min="0">
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Лекции (часы)</label>
-            <input type="number" id="sLecture" value="0" min="0">
-          </div>
-          <div class="form-group">
-            <label>Практика (часы)</label>
-            <input type="number" id="sPractice" value="0" min="0">
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-outline" onclick="closeModal('subjectModal')">Отмена</button>
-          <button type="submit" class="btn btn-primary">Сохранить</button>
-        </div>
-      </form>
-    `);
-    openModal('subjectModal');
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal('subjectModal')">Отмена</button>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+      </div>
+    </form>
+  `);
+  openModal('subjectModal');
+  loadCollegeSelect();
 
-    document.getElementById('subjectForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const data = {
-        college_id: Number(document.getElementById('sCollegeId').value),
-        name: document.getElementById('sName').value.trim(),
-        lecture_hours: Number(document.getElementById('sLecture').value),
-        practice_hours: Number(document.getElementById('sPractice').value)
-      };
-      if (!data.name) return;
-      try {
-        await apiPost('/subjects', data);
-        closeModal('subjectModal');
-        renderSubjects(document.getElementById('mainContent'));
-      } catch (err) {
-        alert(err.error || 'Ошибка');
-      }
-    });
+  document.getElementById('subjectForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+      college_id: Number(document.getElementById('sCollegeId').value),
+      name: document.getElementById('sName').value.trim(),
+      lecture_hours: Number(document.getElementById('sLecture').value),
+      practice_hours: Number(document.getElementById('sPractice').value)
+    };
+    if (!data.name) return;
+    try {
+      await apiPost('/subjects', data);
+      closeModal('subjectModal');
+      renderSubjects(document.getElementById('mainContent'));
+    } catch (err) {
+      alert(err.error || 'Ошибка');
+    }
   });
 }
 
 async function showEditSubjectModal(id) {
   try {
     const subject = await apiGet(`/subjects/${id}`);
-    await loadCollegeSelect();
     createModal('subjectModal', 'Редактировать предмет', `
       <form id="subjectForm">
         <div class="form-group">
@@ -140,8 +138,9 @@ async function showEditSubjectModal(id) {
         </div>
       </form>
     `);
-    document.getElementById('sCollegeId').value = subject.college_id;
     openModal('subjectModal');
+    await loadCollegeSelect();
+    document.getElementById('sCollegeId').value = subject.college_id;
 
     document.getElementById('subjectForm').addEventListener('submit', async (e) => {
       e.preventDefault();
