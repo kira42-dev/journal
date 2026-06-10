@@ -1,4 +1,5 @@
 async function renderSubjects(container) {
+  const prevCollegeId = document.getElementById('collegeFilter')?.value || '';
   const role = getRole();
   let html = '<div class="toolbar"><h2>Предметы</h2>';
   if (role === 'teacher') {
@@ -14,14 +15,14 @@ async function renderSubjects(container) {
   container.innerHTML = html;
 
   document.getElementById('collegeFilter').addEventListener('change', loadSubjectsTable);
-  await loadSubjectsTable();
+  await loadSubjectsTable(prevCollegeId);
 }
 
-async function loadSubjectsTable() {
+async function loadSubjectsTable(defaultVal) {
   const select = document.getElementById('collegeFilter');
   try {
     const colleges = await apiGet('/colleges');
-    const currentVal = select.value;
+    const currentVal = select.value || defaultVal || '';
     colleges.forEach(c => {
       if (!select.querySelector(`option[value="${c.id}"]`)) {
         const opt = document.createElement('option');

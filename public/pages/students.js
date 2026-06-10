@@ -1,4 +1,5 @@
 async function renderStudents(container) {
+  const prevGroupId = document.getElementById('groupFilter')?.value || '';
   const role = getRole();
   let html = '<div class="toolbar"><h2>Студенты</h2>';
   if (role === 'teacher') {
@@ -13,14 +14,14 @@ async function renderStudents(container) {
   container.innerHTML = html;
 
   document.getElementById('groupFilter').addEventListener('change', loadStudentsTable);
-  await loadStudentsTable();
+  await loadStudentsTable(prevGroupId);
 }
 
-async function loadStudentsTable() {
+async function loadStudentsTable(defaultVal) {
   const select = document.getElementById('groupFilter');
   try {
     const groups = await apiGet('/groups');
-    const currentVal = select.value;
+    const currentVal = select.value || defaultVal || '';
     groups.forEach(g => {
       if (!select.querySelector(`option[value="${g.id}"]`)) {
         const opt = document.createElement('option');

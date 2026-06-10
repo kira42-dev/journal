@@ -1,4 +1,10 @@
 async function renderLessons(container) {
+  const prev = {
+    group: document.getElementById('groupFilter')?.value || '',
+    subject: document.getElementById('subjectFilter')?.value || '',
+    date: document.getElementById('dateFilter')?.value || '',
+    type: document.getElementById('typeFilter')?.value || ''
+  };
   const role = getRole();
   let html = '<div class="toolbar"><h2>Занятия</h2>';
   if (role === 'teacher') {
@@ -22,16 +28,17 @@ async function renderLessons(container) {
   document.getElementById('dateFilter').addEventListener('change', loadLessonsTable);
   document.getElementById('typeFilter').addEventListener('change', loadLessonsTable);
 
-  await loadLessonsTable();
+  await loadLessonsTable(prev);
 }
 
-async function loadLessonsTable() {
+async function loadLessonsTable(defaults) {
+  defaults = defaults || {};
   try {
     const groups = await apiGet('/groups');
     const subjects = await apiGet('/subjects');
 
-    const prevGroup = document.getElementById('groupFilter').value;
-    const prevSubject = document.getElementById('subjectFilter').value;
+    const prevGroup = document.getElementById('groupFilter').value || defaults.group || '';
+    const prevSubject = document.getElementById('subjectFilter').value || defaults.subject || '';
     fillSelect('groupFilter', groups, 'id', 'name');
     fillSelect('subjectFilter', subjects, 'id', 'name');
     document.getElementById('groupFilter').value = prevGroup;

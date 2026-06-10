@@ -1,4 +1,5 @@
 async function renderTopics(container) {
+  const prevSubjectId = document.getElementById('subjectFilter')?.value || '';
   const role = getRole();
   let html = '<div class="toolbar"><h2>Темы</h2>';
   if (role === 'teacher') {
@@ -13,14 +14,14 @@ async function renderTopics(container) {
   container.innerHTML = html;
 
   document.getElementById('subjectFilter').addEventListener('change', loadTopicsTable);
-  await loadTopicsTable();
+  await loadTopicsTable(prevSubjectId);
 }
 
-async function loadTopicsTable() {
+async function loadTopicsTable(defaultVal) {
   const select = document.getElementById('subjectFilter');
   try {
     const subjects = await apiGet('/subjects');
-    const currentVal = select.value;
+    const currentVal = select.value || defaultVal || '';
     subjects.forEach(s => {
       if (!select.querySelector(`option[value="${s.id}"]`)) {
         const opt = document.createElement('option');
