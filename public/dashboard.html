@@ -3,16 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Электронный журнал</title>
+  <title>EcoJournal — Электронный журнал</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="app-layout">
     <header class="app-header">
-      <h1 class="app-title">Электронный журнал</h1>
+      <h1 class="app-title">&#x1F331; EcoJournal</h1>
       <div class="header-right">
         <span id="userInfo" class="user-info"></span>
-        <button id="logoutBtn" class="btn btn-outline">Выйти</button>
+        <button id="logoutBtn" class="btn btn-outline btn-sm">Выйти</button>
       </div>
     </header>
     <div class="app-body">
@@ -20,8 +22,11 @@
         <!-- динамическое меню -->
       </nav>
       <main id="mainContent" class="main-content">
-        <h2>Добро пожаловать</h2>
-        <p>Выберите раздел из меню слева.</p>
+        <div style="text-align:center;padding:80px 20px">
+          <div style="font-size:56px;margin-bottom:16px">&#x1F331;</div>
+          <h2 style="font-size:1.5rem;font-weight:800;color:#1E4D3D">Добро пожаловать в EcoJournal</h2>
+          <p style="color:#6B6B6B;font-size:0.95rem;margin-top:8px">Выберите раздел из меню слева для начала работы</p>
+        </div>
       </main>
     </div>
   </div>
