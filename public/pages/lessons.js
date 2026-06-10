@@ -7,22 +7,35 @@ async function renderLessons(container) {
   html += '</div>';
 
   html += '<div class="filters">';
-  html += '<div class="filter-group"><label>Группа</label><select id="groupFilter" onchange="renderLessons(document.getElementById(\'mainContent\'))"><option value="">Все</option></select></div>';
-  html += '<div class="filter-group"><label>Предмет</label><select id="subjectFilter" onchange="renderLessons(document.getElementById(\'mainContent\'))"><option value="">Все</option></select></div>';
-  html += '<div class="filter-group"><label>Дата</label><input type="date" id="dateFilter" onchange="renderLessons(document.getElementById(\'mainContent\'))"></div>';
-  html += '<div class="filter-group"><label>Тип</label><select id="typeFilter" onchange="renderLessons(document.getElementById(\'mainContent\'))"><option value="">Все</option><option value="lecture">Лекция</option><option value="practice">Практика</option></select></div>';
+  html += '<div class="filter-group"><label>Группа</label><select id="groupFilter"><option value="">Все</option></select></div>';
+  html += '<div class="filter-group"><label>Предмет</label><select id="subjectFilter"><option value="">Все</option></select></div>';
+  html += '<div class="filter-group"><label>Дата</label><input type="date" id="dateFilter"></div>';
+  html += '<div class="filter-group"><label>Тип</label><select id="typeFilter"><option value="">Все</option><option value="lecture">Лекция</option><option value="practice">Практика</option></select></div>';
   html += '</div>';
 
   html += '<div id="hoursRemaining"></div>';
   html += '<div id="lessonsTable"><p class="empty-state">Загрузка...</p></div>';
   container.innerHTML = html;
 
+  document.getElementById('groupFilter').addEventListener('change', loadLessonsTable);
+  document.getElementById('subjectFilter').addEventListener('change', loadLessonsTable);
+  document.getElementById('dateFilter').addEventListener('change', loadLessonsTable);
+  document.getElementById('typeFilter').addEventListener('change', loadLessonsTable);
+
+  await loadLessonsTable();
+}
+
+async function loadLessonsTable() {
   try {
     const groups = await apiGet('/groups');
     const subjects = await apiGet('/subjects');
 
+    const prevGroup = document.getElementById('groupFilter').value;
+    const prevSubject = document.getElementById('subjectFilter').value;
     fillSelect('groupFilter', groups, 'id', 'name');
     fillSelect('subjectFilter', subjects, 'id', 'name');
+    document.getElementById('groupFilter').value = prevGroup;
+    document.getElementById('subjectFilter').value = prevSubject;
 
     const params = new URLSearchParams();
     const gId = document.getElementById('groupFilter').value;
@@ -35,10 +48,13 @@ async function renderLessons(container) {
     if (type) params.set('lesson_type', type);
 
     const qs = params.toString();
+    const role = getRole();
     const lessons = await apiGet('/lessons' + (qs ? '?' + qs : ''));
 
     if (gId && sId) {
       loadHoursRemaining(gId, sId);
+    } else {
+      document.getElementById('hoursRemaining').innerHTML = '';
     }
 
     const tbody = lessons.map(l => `
@@ -52,8 +68,8 @@ async function renderLessons(container) {
         <td>${l.lesson_type === 'lecture' ? 'Лекция' : 'Практика'}</td>
         <td>
           ${role === 'teacher' ? `
-            <button class="btn btn-sm btn-outline" onclick="showEditLessonModal(${l.id})">✎</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteLesson(${l.id})">✕</button>
+            <button class="btn btn-sm btn-outline" onclick="showEditLessonModal(${escapeAttr(l.id)})">✎</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteLesson(${escapeAttr(l.id)})">✕</button>
           ` : ''}
         </td>
       </tr>
