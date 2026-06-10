@@ -23,6 +23,9 @@ async function renderSubjects(container) {
       select.appendChild(opt);
     });
 
+    const collegeMap = {};
+    colleges.forEach(c => { collegeMap[c.id] = c.name; });
+
     const collegeId = select.value;
     const url = collegeId ? `/subjects?college_id=${collegeId}` : '/subjects';
     const subjects = await apiGet(url);
@@ -31,7 +34,7 @@ async function renderSubjects(container) {
       <tr>
         <td>${s.id}</td>
         <td>${s.name}</td>
-        <td>${s.college_id}</td>
+        <td>${collegeMap[s.college_id] || s.college_id}</td>
         <td>${s.lecture_hours}</td>
         <td>${s.practice_hours}</td>
         <td>${s.total_hours}</td>

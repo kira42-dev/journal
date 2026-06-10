@@ -77,6 +77,10 @@ function showError(msg) {
   }
 }
 
+function escapeAttr(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function openModal(id) {
   document.getElementById(id).classList.add('open');
 }

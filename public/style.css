@@ -307,10 +307,24 @@ tr:hover {
   justify-content: center;
   z-index: 1000;
   padding: 20px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
 .modal-overlay.open {
   display: flex;
+  opacity: 1;
+}
+
+.modal-overlay.open .modal {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.modal {
+  transform: scale(0.95);
+  opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 .modal {
@@ -347,6 +361,12 @@ tr:hover {
   color: var(--success);
   font-size: 0.85rem;
   margin-bottom: 12px;
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding: 8px 0;
 }
 
 .empty-state {

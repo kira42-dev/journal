@@ -15,7 +15,7 @@ async function renderColleges(container) {
         <td>${c.name}</td>
         <td>
           ${role === 'teacher' ? `
-            <button class="btn btn-sm btn-outline" onclick="showEditCollegeModal(${c.id}, '${c.name}')">✎</button>
+            <button class="btn btn-sm btn-outline" onclick="showEditCollegeModal(${c.id}, '${escapeAttr(c.name)}')">✎</button>
             <button class="btn btn-sm btn-danger" onclick="deleteCollege(${c.id})">✕</button>
           ` : ''}
         </td>

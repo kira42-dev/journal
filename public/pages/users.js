@@ -150,11 +150,18 @@ async function toggleUserStudentField() {
 
 async function loadStudentsForUsers() {
   try {
-    const students = await apiGet('/students');
+    const [students, users] = await Promise.all([
+      apiGet('/students'),
+      apiGet('/users')
+    ]);
+    const headmanStudentIds = new Set(
+      users.filter(u => u.role === 'headman' && u.student_id).map(u => u.student_id)
+    );
+    const available = students.filter(s => !headmanStudentIds.has(s.id));
     const sel = document.getElementById('uStudentId');
     if (sel) {
       sel.innerHTML = '<option value="">— Выберите студента —</option>' +
-        students.map(s => `<option value="${s.id}">${s.full_name}</option>`).join('');
+        available.map(s => `<option value="${s.id}">${s.full_name}</option>`).join('');
     }
   } catch { }
 }

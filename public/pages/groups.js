@@ -34,7 +34,7 @@ async function renderGroups(container) {
         <td>${g.headman_name || '—'}</td>
         <td>
           ${role === 'teacher' ? `
-            <button class="btn btn-sm btn-outline" onclick="showEditGroupModal(${g.id}, '${g.name.replace(/'/g, "\\'")}')">✎</button>
+            <button class="btn btn-sm btn-outline" onclick="showEditGroupModal(${g.id}, '${escapeAttr(g.name)}')">✎</button>
             <button class="btn btn-sm btn-outline" onclick="showSetHeadmanModal(${g.id})">Назначить старосту</button>
             <button class="btn btn-sm btn-danger" onclick="deleteGroup(${g.id})">✕</button>
           ` : ''}

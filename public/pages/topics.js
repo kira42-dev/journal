@@ -34,7 +34,7 @@ async function renderTopics(container) {
         <td>${t.order_index}</td>
         <td>
           ${role === 'teacher' ? `
-            <button class="btn btn-sm btn-outline" onclick="showEditTopicModal(${t.id}, '${t.name.replace(/'/g, "\\'")}', ${t.order_index})">✎</button>
+            <button class="btn btn-sm btn-outline" onclick="showEditTopicModal(${t.id}, '${escapeAttr(t.name)}', ${t.order_index})">✎</button>
             <button class="btn btn-sm btn-danger" onclick="deleteTopic(${t.id})">✕</button>
           ` : ''}
         </td>

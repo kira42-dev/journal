@@ -22,6 +22,9 @@ async function renderStudents(container) {
       select.appendChild(opt);
     });
 
+    const groupMap = {};
+    groups.forEach(g => { groupMap[g.id] = g.name; });
+
     const groupId = select.value;
     const url = groupId ? `/students?group_id=${groupId}` : '/students';
     const students = await apiGet(url);
@@ -30,10 +33,10 @@ async function renderStudents(container) {
       <tr>
         <td>${s.id}</td>
         <td>${s.full_name}</td>
-        <td>${s.group_id}</td>
+        <td>${groupMap[s.group_id] || s.group_id}</td>
         <td>
           ${role === 'teacher' ? `
-            <button class="btn btn-sm btn-outline" onclick="showEditStudentModal(${s.id}, '${s.full_name.replace(/'/g, "\\'")}')">✎</button>
+            <button class="btn btn-sm btn-outline" onclick="showEditStudentModal(${s.id}, '${escapeAttr(s.full_name)}')">✎</button>
             <button class="btn btn-sm btn-outline" onclick="showTransferModal(${s.id})">Перевод</button>
             <button class="btn btn-sm btn-danger" onclick="deleteStudent(${s.id})">✕</button>
           ` : ''}

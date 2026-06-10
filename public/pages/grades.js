@@ -3,7 +3,13 @@ async function renderGrades(container) {
   let html = '<h2>Журнал оценок</h2>';
 
   html += '<div class="filters" style="margin: 16px 0;">';
-  html += '<div class="filter-group"><label>Группа</label><select id="groupFilter" onchange="loadLessonsForGrades()"><option value="">Выберите группу</option></select></div>';
+
+  if (role === 'teacher') {
+    html += '<div class="filter-group"><label>Группа</label><select id="groupFilter" onchange="loadLessonsForGrades()"><option value="">Выберите группу</option></select></div>';
+  } else {
+    html += '<div class="filter-group"><label>Группа</label><select id="groupFilter" style="display:none"></select><span id="groupLabel" class="text-secondary"></span></div>';
+  }
+
   html += '<div class="filter-group"><label>Предмет</label><select id="subjectFilter" onchange="loadLessonsForGrades()"><option value="">Выберите предмет</option></select></div>';
   html += '<div class="filter-group"><label>Занятие</label><select id="lessonFilter" onchange="loadGradeTable()"><option value="">Выберите занятие</option></select></div>';
   html += '</div>';
@@ -16,6 +22,14 @@ async function renderGrades(container) {
     const subjects = await apiGet('/subjects');
     fillSelect('groupFilter', groups, 'id', 'name');
     fillSelect('subjectFilter', subjects, 'id', 'name');
+
+    if (role === 'headman' && groups.length > 0) {
+      const groupLabel = document.getElementById('groupLabel');
+      if (groupLabel) groupLabel.textContent = 'Группа: ' + groups[0].name;
+    }
+    if (role === 'headman' && groups.length > 0) {
+      document.getElementById('groupFilter').value = groups[0].id;
+    }
   } catch (err) {
     container.innerHTML = `<p class="error-message">${err.error || 'Ошибка загрузки'}</p>`;
   }
@@ -80,7 +94,7 @@ async function loadGradeTable() {
         ${role === 'teacher' ? `<td>${g.comment || ''}</td>` : ''}
         <td>
           ${role === 'teacher' ? `
-            <button class="btn btn-sm btn-outline" onclick="showEditGradeModal(${g.id}, ${g.student_id}, ${g.presence}, ${g.grade !== null ? g.grade : 'null'}, '${(g.comment || '').replace(/'/g, "\\'")}')">✎</button>
+            <button class="btn btn-sm btn-outline" onclick="showEditGradeModal(${g.id}, ${g.student_id}, ${g.presence}, ${g.grade !== null ? g.grade : 'null'}, '${escapeAttr(g.comment || '')}')">✎</button>
             <button class="btn btn-sm btn-danger" onclick="deleteGrade(${g.id})">✕</button>
           ` : ''}
         </td>
@@ -163,7 +177,9 @@ function showAddGradeModal(lessonId, groupId) {
 }
 
 function showEditGradeModal(id, studentId, presence, grade, comment) {
-  apiGet(`/students?group_id=`).then(students => {
+  const groupId = document.getElementById('groupFilter').value;
+  if (!groupId) { alert('Группа не выбрана'); return; }
+  apiGet(`/students?group_id=${groupId}`).then(students => {
     createModal('gradeModal', 'Редактировать оценку', `
       <form id="gradeForm">
         <div class="form-row">
