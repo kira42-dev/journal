@@ -7,27 +7,37 @@ async function renderSubjects(container) {
   html += '</div>';
 
   html += '<div class="filters">';
-  html += '<div class="filter-group"><label>Колледж</label><select id="collegeFilter" onchange="renderSubjects(document.getElementById(\'mainContent\'))"><option value="">Все</option></select></div>';
+  html += '<div class="filter-group"><label>Колледж</label><select id="collegeFilter"><option value="">Все</option></select></div>';
   html += '</div>';
 
   html += '<div id="subjectsTable"><p class="empty-state">Загрузка...</p></div>';
   container.innerHTML = html;
 
+  document.getElementById('collegeFilter').addEventListener('change', loadSubjectsTable);
+  await loadSubjectsTable();
+}
+
+async function loadSubjectsTable() {
+  const select = document.getElementById('collegeFilter');
   try {
     const colleges = await apiGet('/colleges');
-    const select = document.getElementById('collegeFilter');
+    const currentVal = select.value;
     colleges.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.id;
-      opt.textContent = c.name;
-      select.appendChild(opt);
+      if (!select.querySelector(`option[value="${c.id}"]`)) {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        select.appendChild(opt);
+      }
     });
+    select.value = currentVal;
 
     const collegeMap = {};
     colleges.forEach(c => { collegeMap[c.id] = c.name; });
 
     const collegeId = select.value;
     const url = collegeId ? `/subjects?college_id=${collegeId}` : '/subjects';
+    const role = getRole();
     const subjects = await apiGet(url);
 
     const tbody = subjects.map(s => `
@@ -40,8 +50,8 @@ async function renderSubjects(container) {
         <td>${s.total_hours}</td>
         <td>
           ${role === 'teacher' ? `
-            <button class="btn btn-sm btn-outline" onclick="showEditSubjectModal(${s.id})">✎</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteSubject(${s.id})">✕</button>
+            <button class="btn btn-sm btn-outline" onclick="showEditSubjectModal(${escapeAttr(s.id)})">✎</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteSubject(${escapeAttr(s.id)})">✕</button>
           ` : ''}
         </td>
       </tr>
@@ -51,7 +61,7 @@ async function renderSubjects(container) {
       ? '<p class="empty-state">Нет предметов</p>'
       : `<div class="table-container"><table>
           <thead><tr>
-            <th>ID</th><th>Название</th><th>Колледж ID</th><th>Лекции (ч)</th><th>Практика (ч)</th><th>Всего (ч)</th><th>Действия</th>
+            <th>ID</th><th>Название</th><th>Колледж</th><th>Лекции (ч)</th><th>Практика (ч)</th><th>Всего (ч)</th><th>Действия</th>
           </tr></thead>
           <tbody>${tbody}</tbody>
         </table></div>`;
