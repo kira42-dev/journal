@@ -7,24 +7,37 @@ async function renderTopics(container) {
   html += '</div>';
 
   html += '<div class="filters">';
-  html += '<div class="filter-group"><label>Предмет</label><select id="subjectFilter" onchange="renderTopics(document.getElementById(\'mainContent\'))"><option value="">Выберите предмет</option></select></div>';
+  html += '<div class="filter-group"><label>Предмет</label><select id="subjectFilter"><option value="">Выберите предмет</option></select></div>';
   html += '</div>';
   html += '<div id="topicsTable"><p class="empty-state">Выберите предмет для просмотра тем</p></div>';
   container.innerHTML = html;
 
+  document.getElementById('subjectFilter').addEventListener('change', loadTopicsTable);
+  await loadTopicsTable();
+}
+
+async function loadTopicsTable() {
+  const select = document.getElementById('subjectFilter');
   try {
     const subjects = await apiGet('/subjects');
-    const select = document.getElementById('subjectFilter');
+    const currentVal = select.value;
     subjects.forEach(s => {
-      const opt = document.createElement('option');
-      opt.value = s.id;
-      opt.textContent = `${s.name} (ID: ${s.id})`;
-      select.appendChild(opt);
+      if (!select.querySelector(`option[value="${s.id}"]`)) {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = `${s.name} (ID: ${s.id})`;
+        select.appendChild(opt);
+      }
     });
+    select.value = currentVal;
 
     const subjectId = select.value;
-    if (!subjectId) return;
+    if (!subjectId) {
+      document.getElementById('topicsTable').innerHTML = '<p class="empty-state">Выберите предмет для просмотра тем</p>';
+      return;
+    }
 
+    const role = getRole();
     const topics = await apiGet(`/topics?subject_id=${subjectId}`);
 
     const tbody = topics.map(t => `
@@ -34,8 +47,8 @@ async function renderTopics(container) {
         <td>${t.order_index}</td>
         <td>
           ${role === 'teacher' ? `
-            <button class="btn btn-sm btn-outline" onclick="showEditTopicModal(${t.id}, '${escapeAttr(t.name)}', ${t.order_index})">✎</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteTopic(${t.id})">✕</button>
+            <button class="btn btn-sm btn-outline" onclick="showEditTopicModal(${escapeAttr(t.id)}, '${escapeAttr(t.name)}', ${t.order_index})">✎</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteTopic(${escapeAttr(t.id)})">✕</button>
           ` : ''}
         </td>
       </tr>
