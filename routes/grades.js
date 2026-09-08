@@ -177,4 +177,61 @@ router.delete('/:id', requireTeacher, (req, res) => {
   }
 });
 
+// Bulk upsert for inline gradebook editing.
+// Body: { items: [{ lesson_id, student_id, grade, presence, comment }] }
+// Creates or updates each grade for (lesson, student).
+router.post('/bulk', requireTeacher, (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'items обязателен (массив)' });
+    }
+
+    const checkLesson = db.prepare('SELECT id, group_id FROM lessons WHERE id = ?');
+    const checkStudent = db.prepare('SELECT id, group_id FROM students WHERE id = ?');
+    const findGrade = db.prepare('SELECT id FROM grades WHERE lesson_id = ? AND student_id = ?');
+    const insertGrade = db.prepare('INSERT INTO grades (lesson_id, student_id, grade, comment, presence) VALUES (?, ?, ?, ?, ?)');
+    const updateGrade = db.prepare('UPDATE grades SET grade = ?, comment = ?, presence = ? WHERE id = ?');
+
+    let saved = 0;
+    const errors = [];
+
+    const tx = db.transaction(() => {
+      for (const it of items) {
+        const lesson = checkLesson.get(it.lesson_id);
+        if (!lesson) { errors.push(`Занятие ${it.lesson_id} не найдено`); continue; }
+        const student = checkStudent.get(it.student_id);
+        if (!student) { errors.push(`Студент ${it.student_id} не найден`); continue; }
+        if (student.group_id !== lesson.group_id) {
+          errors.push(`Студент ${it.student_id} не из группы занятия`); continue;
+        }
+        const grade = it.grade === undefined || it.grade === null ? null : Number(it.grade);
+        if (grade !== null && (grade < 2 || grade > 5)) {
+          errors.push(`Оценка для student=${it.student_id} вне диапазона 2-5`);
+          continue;
+        }
+        const presence = it.presence === undefined || it.presence === null ? 1 : Number(it.presence);
+        if (![0, 1].includes(presence)) {
+          errors.push(`Присутствие для student=${it.student_id} должно быть 0 или 1`);
+          continue;
+        }
+        const comment = it.comment === undefined ? null : String(it.comment).trim() || null;
+
+        const existing = findGrade.get(it.lesson_id, it.student_id);
+        if (existing) {
+          updateGrade.run(grade, comment, presence, existing.id);
+        } else {
+          insertGrade.run(it.lesson_id, it.student_id, grade, comment, presence);
+        }
+        saved++;
+      }
+    });
+    tx();
+
+    res.json({ saved, errors });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 module.exports = router;

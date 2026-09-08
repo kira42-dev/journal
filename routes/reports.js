@@ -210,4 +210,67 @@ router.get('/debtors', requireHeadmanOrTeacher, (req, res) => {
   }
 });
 
+// Gradebook matrix: students x lessons with grade, presence, comment per cell
+router.get('/gradebook', requireHeadmanOrTeacher, (req, res) => {
+  try {
+    let { group_id, subject_id } = req.query;
+    if (!group_id || !subject_id) {
+      return res.status(400).json({ error: 'group_id и subject_id обязательны' });
+    }
+    if (req.user.role === 'headman') {
+      group_id = req.user.group_id;
+    }
+
+    const group = db.prepare('SELECT id, name, college_id FROM groups_tbl WHERE id = ?').get(group_id);
+    if (!group) return res.status(404).json({ error: 'Группа не найдена' });
+
+    const subject = db.prepare('SELECT id, name, college_id, semester, course, assessment_type FROM subjects WHERE id = ?').get(subject_id);
+    if (!subject) return res.status(404).json({ error: 'Предмет не найден' });
+
+    const lessons = db.prepare(`
+      SELECT l.id, l.lesson_date, l.hours, l.lesson_type,
+             COALESCE(t.name, '') AS topic
+      FROM lessons l
+      LEFT JOIN topics t ON l.topic_id = t.id
+      WHERE l.group_id = ? AND l.subject_id = ?
+      ORDER BY l.lesson_date ASC, l.id ASC
+    `).all(group_id, subject_id);
+
+    const students = db.prepare(`
+      SELECT id AS student_id, full_name FROM students WHERE group_id = ? ORDER BY full_name
+    `).all(group_id);
+
+    const grades = db.prepare(`
+      SELECT gr.id AS grade_id, gr.lesson_id AS lesson_id, gr.student_id AS student_id,
+             gr.grade, gr.presence, gr.comment
+      FROM grades gr
+      JOIN lessons l ON gr.lesson_id = l.id
+      WHERE l.group_id = ? AND l.subject_id = ?
+    `).all(group_id, subject_id);
+
+    const cells = {};
+    for (const g of grades) {
+      cells[`${g.student_id}:${g.lesson_id}`] = {
+        grade_id: g.grade_id,
+        grade: g.grade,
+        presence: g.presence,
+        comment: g.comment || ''
+      };
+    }
+
+    res.json({
+      group: { id: group.id, name: group.name },
+      subject: { id: subject.id, name: subject.name, semester: subject.semester, course: subject.course, assessment_type: subject.assessment_type },
+      lessons: lessons.map(l => ({ id: l.id, date: l.lesson_date, hours: l.hours, type: l.lesson_type, topic: l.topic })),
+      students: students.map(s => ({
+        student_id: s.student_id,
+        full_name: s.full_name,
+        grades: lessons.map(l => cells[`${s.student_id}:${l.id}`] || null)
+      }))
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 module.exports = router;

@@ -1,20 +1,27 @@
 async function renderGrades(container) {
   const role = getRole();
-  let html = '<h2>Журнал оценок</h2>';
+  let html = '<div class="toolbar"><h2>Журнал оценок</h2></div>';
 
+  // Tabs
+  html += '<div class="tabs" id="gradesTabs">';
+  html += '<button class="tab active" data-grade-tab="matrix" onclick="switchGradeTab(\'matrix\')">Сводная таблица</button>';
+  html += '<button class="tab" data-grade-tab="lesson" onclick="switchGradeTab(\'lesson\')">По занятию</button>';
+  html += '</div>';
+
+  // Filters
   html += '<div class="filters" style="margin: 16px 0;">';
 
   if (role === 'teacher') {
-    html += '<div class="filter-group"><label>Группа</label><select id="groupFilter" onchange="loadLessonsForGrades()"><option value="">Выберите группу</option></select></div>';
+    html += '<div class="filter-group"><label>Группа</label><select id="groupFilter" onchange="onGradeFilterChange()"><option value="">Выберите группу</option></select></div>';
   } else {
     html += '<div class="filter-group"><label>Группа</label><select id="groupFilter" style="display:none"></select><span id="groupLabel" class="text-secondary"></span></div>';
   }
 
-  html += '<div class="filter-group"><label>Предмет</label><select id="subjectFilter" onchange="loadLessonsForGrades()"><option value="">Выберите предмет</option></select></div>';
+  html += '<div class="filter-group"><label>Предмет</label><select id="subjectFilter" onchange="onGradeFilterChange()"><option value="">Выберите предмет</option></select></div>';
   html += '<div class="filter-group"><label>Занятие</label><select id="lessonFilter" onchange="loadGradeTable()"><option value="">Выберите занятие</option></select></div>';
   html += '</div>';
 
-  html += '<div id="gradeTable"><p class="empty-state">Выберите занятие для просмотра оценок</p></div>';
+  html += '<div id="gradeTable"></div>';
   container.innerHTML = html;
 
   try {
@@ -26,14 +33,197 @@ async function renderGrades(container) {
     if (role === 'headman' && groups.length > 0) {
       const groupLabel = document.getElementById('groupLabel');
       if (groupLabel) groupLabel.textContent = 'Группа: ' + groups[0].name;
-    }
-    if (role === 'headman' && groups.length > 0) {
       document.getElementById('groupFilter').value = groups[0].id;
     }
+    onGradeFilterChange();
   } catch (err) {
     container.innerHTML = `<p class="error-message">${err.error || 'Ошибка загрузки'}</p>`;
   }
 }
+
+function getActiveGradeTab() {
+  const active = document.querySelector('#gradesTabs .tab.active');
+  return active ? active.dataset.gradeTab : 'matrix';
+}
+
+function switchGradeTab(tab) {
+  document.querySelectorAll('#gradesTabs .tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.gradeTab === tab)
+  );
+  const lessonF = document.getElementById('lessonFilter');
+  if (lessonF) lessonF.closest('.filter-group').style.display = tab === 'matrix' ? 'none' : '';
+  onGradeFilterChange();
+}
+
+function onGradeFilterChange() {
+  const tab = getActiveGradeTab();
+  const lessonF = document.getElementById('lessonFilter');
+  if (lessonF) lessonF.closest('.filter-group').style.display = tab === 'matrix' ? 'none' : '';
+  if (tab === 'matrix') {
+    loadGradebookMatrix();
+  } else {
+    loadLessonsForGrades();
+  }
+}
+
+// ============ СВОДНАЯ ТАБЛИЦА (matrix, inline editing) ============
+
+async function loadGradebookMatrix() {
+  const groupId = document.getElementById('groupFilter')?.value;
+  const subjectId = document.getElementById('subjectFilter')?.value;
+  const container = document.getElementById('gradeTable');
+  const role = getRole();
+
+  if (!groupId || !subjectId) {
+    container.innerHTML = '<p class="empty-state">Выберите группу и предмет</p>';
+    return;
+  }
+
+  try {
+    const data = await apiGet(`/reports/gradebook?group_id=${groupId}&subject_id=${subjectId}`);
+
+    if (data.lessons.length === 0) {
+      container.innerHTML = '<p class="empty-state">По этому предмету в данной группе нет занятий. Сначала создайте занятие в разделе «Занятия».</p>';
+      return;
+    }
+
+    let html = `<div class="card"><h3>${data.subject.name} — ${data.group.name} (${data.subject.course} курс, ${data.subject.semester} семестр)</h3>`;
+    html += `<p class="text-secondary" style="padding:0">Форма контроля: ${data.subject.assessment_type === 'exam' ? 'Экзамен' : 'Зачёт'}</p></div>`;
+
+    html += `<div class="gb-wrapper"><table class="gb-table">
+      <thead><tr>
+        <th class="gb-sticky-col gb-name-col">Студент</th>`;
+
+    data.lessons.forEach(l => {
+      html += `<th class="gb-lesson-col">
+        <div class="gb-date">${l.date}</div>
+        <div class="gb-topic">${l.topic || ''}</div>
+        <div class="gb-sub">${l.type === 'lecture' ? 'Лекция' : 'Практика'} · ${l.hours}ч</div>
+      </th>`;
+    });
+
+    html += '</tr></thead><tbody>';
+
+    data.students.forEach(s => {
+      html += `<tr>
+        <td class="gb-sticky-col gb-name-col">${s.full_name}</td>`;
+      data.lessons.forEach((l, idx) => {
+        html += renderGradeCell(s.student_id, l.id, s.grades[idx], role);
+      });
+      html += '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+
+    html += '<p class="text-secondary gb-hint">Выберите оценку, отметьте отсутствие (НБ) или введите комментарий в ячейке. Сохранение автоматическое.</p>';
+
+    container.innerHTML = html;
+    attachGradebookEvents();
+  } catch (err) {
+    container.innerHTML = `<p class="error-message">${err.error || 'Ошибка загрузки'}</p>`;
+  }
+}
+
+function renderGradeCell(studentId, lessonId, cell, role) {
+  const isTeacher = role === 'teacher';
+  const presence = cell ? cell.presence : 1;
+  const grade = cell ? cell.grade : null;
+  const comment = cell ? (cell.comment || '') : '';
+
+  let html = `<td class="gb-cell" data-sid="${studentId}" data-lid="${lessonId}">`;
+  html += '<div class="gb-controls">';
+  html += `<button type="button" class="gb-presence ${presence === 0 ? 'absent' : ''}" title="Присутствие / НБ">${presence === 0 ? 'НБ' : '✓'}</button>`;
+  if (isTeacher) {
+    html += '<select class="gb-grade"><option value="">—</option>';
+    [5, 4, 3, 2].forEach(v => {
+      html += `<option value="${v}" ${grade === v ? 'selected' : ''} class="g-g${v}">${v}</option>`;
+    });
+    html += '</select>';
+    html += `<input type="text" class="gb-comment" value="${escapeAttr(comment)}" placeholder="коммент." maxlength="200">`;
+  } else {
+    html += `<span class="gb-grade-readonly ${grade ? 'g-g' + grade : ''}">${grade !== null && grade !== undefined ? grade : (presence === 0 ? 'НБ' : '')}</span>`;
+  }
+  html += '</div></td>';
+  return html;
+}
+
+// Attach inline-editing handlers. We keep a per-cell save queue.
+function attachGradebookEvents() {
+  document.querySelectorAll('.gb-table .gb-cell').forEach(cell => {
+    // Presence toggle
+    const presenceBtn = cell.querySelector('.gb-presence');
+    if (presenceBtn) {
+      presenceBtn.addEventListener('click', () => {
+        const isAbsent = presenceBtn.classList.contains('absent');
+        presenceBtn.classList.toggle('absent', !isAbsent);
+        presenceBtn.textContent = isAbsent ? '✓' : 'НБ';
+        queueCellSave(cell);
+      });
+    }
+    // Grade select
+    const gradeSel = cell.querySelector('.gb-grade');
+    if (gradeSel) {
+      gradeSel.addEventListener('change', () => queueCellSave(cell));
+    }
+    // Comment input (debounced save)
+    const commentInput = cell.querySelector('.gb-comment');
+    if (commentInput) {
+      const doSave = () => queueCellSave(cell);
+      commentInput.addEventListener('change', doSave);
+      commentInput.addEventListener('blur', doSave);
+    }
+  });
+}
+
+let gbSaveTimer = null;
+let gbPending = new Map();
+
+function queueCellSave(cell) {
+  const sid = Number(cell.dataset.sid);
+  const lid = Number(cell.dataset.lid);
+  if (!sid || !lid) return;
+
+  const presenceBtn = cell.querySelector('.gb-presence');
+  const gradeSel = cell.querySelector('.gb-grade');
+  const commentInput = cell.querySelector('.gb-comment');
+
+  const item = {
+    lesson_id: lid,
+    student_id: sid,
+    presence: presenceBtn && presenceBtn.classList.contains('absent') ? 0 : 1,
+    grade: gradeSel && gradeSel.value ? Number(gradeSel.value) : null,
+    comment: commentInput ? (commentInput.value.trim() || null) : null
+  };
+
+  gbPending.set(`${sid}:${lid}`, item);
+
+  if (gbSaveTimer) clearTimeout(gbSaveTimer);
+  gbSaveTimer = setTimeout(savePendingGradebook, 600);
+}
+
+async function savePendingGradebook() {
+  if (gbPending.size === 0) return;
+  const items = Array.from(gbPending.values());
+  gbPending = new Map();
+
+  // visual saving indicator
+  const hint = document.querySelector('.gb-hint');
+  if (hint) hint.textContent = 'Сохранение...';
+
+  try {
+    const res = await apiFetch('/grades/bulk', { method: 'POST', body: JSON.stringify({ items }) });
+    const data = await res.json();
+    if (data.errors && data.errors.length) {
+      alert('Ошибки при сохранении:\n' + data.errors.join('\n'));
+    }
+    if (hint) hint.textContent = 'Кликните в ячейку, чтобы изменить оценку, НБ или комментарий. Сохранение автоматическое.';
+  } catch (err) {
+    if (hint) hint.textContent = 'Ошибка сохранения!';
+    alert(err.error || 'Ошибка сохранения');
+  }
+}
+
+// ============ ПО ЗАНЯТИЮ (existing single-lesson view) ============
 
 async function loadLessonsForGrades() {
   const groupId = document.getElementById('groupFilter').value;
@@ -53,6 +243,15 @@ async function loadLessonsForGrades() {
       lessons.map(l => `<option value="${l.id}">${l.lesson_date} — ${l.subject_name} (${l.hours}ч, ${l.lesson_type === 'lecture' ? 'Лекция' : 'Практика'})${l.topic_name ? ' — ' + l.topic_name : ''}</option>`).join('');
     if (lessons.length === 0) {
       select.innerHTML = '<option value="">Нет занятий</option>';
+      document.getElementById('gradeTable').innerHTML = '<p class="empty-state">По выбранным группе и предмету занятий нет</p>';
+      return;
+    }
+    if (!select.value) {
+      // auto-select first lesson for convenience
+      select.value = select.options[1].value;
+      loadGradeTable();
+    } else {
+      loadGradeTable();
     }
   } catch (err) {
     select.innerHTML = '<option value="">Ошибка загрузки</option>';
