@@ -3,7 +3,11 @@ async function renderSubjects(container) {
   const role = getRole();
   let html = '<div class="toolbar"><h2>Предметы</h2>';
   if (role === 'teacher') {
+    html += '<div style="display:flex;gap:8px">';
+    html += '<button class="btn btn-outline" onclick="exportFile(\'/export/subjects\', \'subjects.xlsx\')">Экспорт</button>';
+    html += '<button class="btn btn-outline" onclick="showImportModal({url:\'/import/subjects\', reload:()=>renderSubjects(document.getElementById(\'mainContent\')), columns:[\'Название\',\'Колледж\',\'Курс\',\'Семестр\',\'Лекции\',\'Практика\',\'Форма контроля\']})">Импорт</button>';
     html += '<button class="btn btn-primary" onclick="showAddSubjectModal()">Добавить предмет</button>';
+    html += '</div>';
   }
   html += '</div>';
 

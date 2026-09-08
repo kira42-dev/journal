@@ -89,6 +89,62 @@ function closeModal(id) {
   document.getElementById(id).classList.remove('open');
 }
 
+function exportFile(url, filename) {
+  const token = getToken();
+  const query = url.startsWith('/api') ? url : `/api${url}`;
+  fetch(query, { headers: { Authorization: `Bearer ${token}` } })
+    .then(res => {
+      if (!res.ok) {
+        return res.json().then(e => { throw e; });
+      }
+      return res.blob();
+    })
+    .then(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    })
+    .catch(err => alert(err.error || 'Ошибка экспорта'));
+}
+
+function showImportModal(params) {
+  createModal('importModal', 'Импорт из Excel/CSV', `
+    <form id="importForm">
+      <p class="text-secondary" style="padding:0;margin-bottom:16px">Загрузите .xlsx или .csv файл с колонками: <strong>${params.columns.join('</strong>, <strong>')}</strong>.</p>
+      <div class="form-group">
+        <input type="file" id="importFile" accept=".xlsx,.xls,.csv" required>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal('importModal')">Отмена</button>
+        <button type="submit" class="btn btn-primary">Импортировать</button>
+      </div>
+    </form>
+  `);
+  openModal('importModal');
+
+  document.getElementById('importForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fileInput = document.getElementById('importFile');
+    if (!fileInput.files[0]) return;
+    const fd = new FormData();
+    fd.append('file', fileInput.files[0]);
+    try {
+      const res = await apiFetch(params.url, { method: 'POST', body: fd });
+      const data = await res.json();
+      closeModal('importModal');
+      const msg = data.errors && data.errors.length > 0
+        ? `Импортировано: ${data.imported}. Ошибки:\n${data.errors.join('\n')}`
+        : `Импортировано: ${data.imported}`;
+      alert(msg);
+      if (params.reload) params.reload();
+    } catch (err) {
+      alert(err.error || 'Ошибка импорта');
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const token = getToken();
   if (!token) {

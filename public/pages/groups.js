@@ -3,7 +3,11 @@ async function renderGroups(container) {
   const role = getRole();
   let html = '<div class="toolbar"><h2>Группы</h2>';
   if (role === 'teacher') {
+    html += '<div style="display:flex;gap:8px">';
+    html += '<button class="btn btn-outline" onclick="exportFile(\'/export/groups\', \'groups.xlsx\')">Экспорт</button>';
+    html += '<button class="btn btn-outline" onclick="showImportModal({url:\'/import/groups\', reload:()=>renderGroups(document.getElementById(\'mainContent\')), columns:[\'Название\',\'Колледж\']})">Импорт</button>';
     html += '<button class="btn btn-primary" onclick="showAddGroupModal()">Добавить группу</button>';
+    html += '</div>';
   }
   html += '</div>';
 

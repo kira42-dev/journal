@@ -3,7 +3,11 @@ async function renderStudents(container) {
   const role = getRole();
   let html = '<div class="toolbar"><h2>Студенты</h2>';
   if (role === 'teacher') {
+    html += '<div style="display:flex;gap:8px">';
+    html += '<button class="btn btn-outline" onclick="exportFile(\'/export/students\', \'students.xlsx\')">Экспорт</button>';
+    html += '<button class="btn btn-outline" onclick="showImportModal({url:\'/import/students\', reload:()=>renderStudents(document.getElementById(\'mainContent\')), columns:[\'ФИО\',\'Группа\']})">Импорт</button>';
     html += '<button class="btn btn-primary" onclick="showAddStudentModal()">Добавить студента</button>';
+    html += '</div>';
   }
   html += '</div>';
 
