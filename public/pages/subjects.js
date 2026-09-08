@@ -9,12 +9,16 @@ async function renderSubjects(container) {
 
   html += '<div class="filters">';
   html += '<div class="filter-group"><label>Колледж</label><select id="collegeFilter"><option value="">Все</option></select></div>';
+  html += '<div class="filter-group"><label>Курс</label><select id="courseFilter"><option value="">Все</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>';
+  html += '<div class="filter-group"><label>Семестр</label><select id="semesterFilter"><option value="">Все</option><option value="1">1</option><option value="2">2</option></select></div>';
   html += '</div>';
 
   html += '<div id="subjectsTable"><p class="empty-state">Загрузка...</p></div>';
   container.innerHTML = html;
 
   document.getElementById('collegeFilter').addEventListener('change', loadSubjectsTable);
+  document.getElementById('courseFilter').addEventListener('change', loadSubjectsTable);
+  document.getElementById('semesterFilter').addEventListener('change', loadSubjectsTable);
   await loadSubjectsTable(prevCollegeId);
 }
 
@@ -37,21 +41,31 @@ async function loadSubjectsTable(defaultVal) {
     colleges.forEach(c => { collegeMap[c.id] = c.name; });
 
     const collegeId = select.value;
-    const url = collegeId ? `/subjects?college_id=${collegeId}` : '/subjects';
+    const courseId = document.getElementById('courseFilter')?.value || '';
+    const semesterId = document.getElementById('semesterFilter')?.value || '';
+    const params = new URLSearchParams();
+    if (collegeId) params.set('college_id', collegeId);
+    if (courseId) params.set('course', courseId);
+    if (semesterId) params.set('semester', semesterId);
+    const qs = params.toString();
     const role = getRole();
-    const subjects = await apiGet(url);
+    const subjects = await apiGet('/subjects' + (qs ? '?' + qs : ''));
 
     const tbody = subjects.map(s => `
       <tr>
         <td>${s.id}</td>
         <td>${s.name}</td>
         <td>${collegeMap[s.college_id] || s.college_id}</td>
+        <td>${s.course}</td>
+        <td>${s.semester}</td>
+        <td>${s.assessment_type === 'exam' ? 'Экзамен' : 'Зачёт'}</td>
         <td>${s.lecture_hours}</td>
         <td>${s.practice_hours}</td>
         <td>${s.total_hours}</td>
         <td>
           ${role === 'teacher' ? `
             <button class="btn btn-sm btn-outline" onclick="showEditSubjectModal(${escapeAttr(s.id)})">✎</button>
+            ${s.assessment_type === 'exam' ? `<button class="btn btn-sm btn-outline" onclick="loadPage('exams')">🎫</button>` : ''}
             <button class="btn btn-sm btn-danger" onclick="deleteSubject(${escapeAttr(s.id)})">✕</button>
           ` : ''}
         </td>
@@ -62,7 +76,7 @@ async function loadSubjectsTable(defaultVal) {
       ? '<p class="empty-state">Нет предметов</p>'
       : `<div class="table-container"><table>
           <thead><tr>
-            <th>ID</th><th>Название</th><th>Колледж</th><th>Лекции (ч)</th><th>Практика (ч)</th><th>Всего (ч)</th><th>Действия</th>
+            <th>ID</th><th>Название</th><th>Колледж</th><th>Курс</th><th>Сем.</th><th>Контроль</th><th>Лекции (ч)</th><th>Практика (ч)</th><th>Всего (ч)</th><th>Действия</th>
           </tr></thead>
           <tbody>${tbody}</tbody>
         </table></div>`;
@@ -92,6 +106,31 @@ function showAddSubjectModal() {
           <input type="number" id="sPractice" value="0" min="0">
         </div>
       </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Курс</label>
+          <select id="sCourse">
+            <option value="1">1 курс</option>
+            <option value="2">2 курс</option>
+            <option value="3">3 курс</option>
+            <option value="4">4 курс</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Семестр</label>
+          <select id="sSemester">
+            <option value="1">1 семестр</option>
+            <option value="2">2 семестр</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Форма контроля</label>
+        <select id="sAssessment">
+          <option value="zachet">Зачёт</option>
+          <option value="exam">Экзамен</option>
+        </select>
+      </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-outline" onclick="closeModal('subjectModal')">Отмена</button>
         <button type="submit" class="btn btn-primary">Сохранить</button>
@@ -107,7 +146,10 @@ function showAddSubjectModal() {
       college_id: Number(document.getElementById('sCollegeId').value),
       name: document.getElementById('sName').value.trim(),
       lecture_hours: Number(document.getElementById('sLecture').value),
-      practice_hours: Number(document.getElementById('sPractice').value)
+      practice_hours: Number(document.getElementById('sPractice').value),
+      course: Number(document.getElementById('sCourse').value),
+      semester: Number(document.getElementById('sSemester').value),
+      assessment_type: document.getElementById('sAssessment').value
     };
     if (!data.name) return;
     try {
@@ -143,6 +185,31 @@ async function showEditSubjectModal(id) {
             <input type="number" id="sPractice" value="${subject.practice_hours}" min="0">
           </div>
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Курс</label>
+            <select id="sCourse">
+              <option value="1" ${subject.course == 1 ? 'selected' : ''}>1 курс</option>
+              <option value="2" ${subject.course == 2 ? 'selected' : ''}>2 курс</option>
+              <option value="3" ${subject.course == 3 ? 'selected' : ''}>3 курс</option>
+              <option value="4" ${subject.course == 4 ? 'selected' : ''}>4 курс</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Семестр</label>
+            <select id="sSemester">
+              <option value="1" ${subject.semester == 1 ? 'selected' : ''}>1 семестр</option>
+              <option value="2" ${subject.semester == 2 ? 'selected' : ''}>2 семестр</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Форма контроля</label>
+          <select id="sAssessment">
+            <option value="zachet" ${subject.assessment_type === 'zachet' ? 'selected' : ''}>Зачёт</option>
+            <option value="exam" ${subject.assessment_type === 'exam' ? 'selected' : ''}>Экзамен</option>
+          </select>
+        </div>
         <div class="modal-actions">
           <button type="button" class="btn btn-outline" onclick="closeModal('subjectModal')">Отмена</button>
           <button type="submit" class="btn btn-primary">Сохранить</button>
@@ -159,7 +226,10 @@ async function showEditSubjectModal(id) {
         college_id: Number(document.getElementById('sCollegeId').value),
         name: document.getElementById('sName').value.trim(),
         lecture_hours: Number(document.getElementById('sLecture').value),
-        practice_hours: Number(document.getElementById('sPractice').value)
+        practice_hours: Number(document.getElementById('sPractice').value),
+        course: Number(document.getElementById('sCourse').value),
+        semester: Number(document.getElementById('sSemester').value),
+        assessment_type: document.getElementById('sAssessment').value
       };
       if (!data.name) return;
       try {

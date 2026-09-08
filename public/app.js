@@ -131,6 +131,7 @@ function renderSidebar() {
       { label: 'Занятия', page: 'lessons' },
       { label: 'Журнал', page: 'grades' },
       { label: 'Отчёты', page: 'reports' },
+      { label: 'Экзамены', page: 'exams' },
       { label: 'Пользователи', page: 'users' }
     ];
   } else if (role === 'headman') {
@@ -185,6 +186,9 @@ async function loadPage(pageName) {
       break;
     case 'reports':
       await renderReports(mainContent);
+      break;
+    case 'exams':
+      await renderExams(mainContent);
       break;
     case 'users':
       await renderUsers(mainContent);

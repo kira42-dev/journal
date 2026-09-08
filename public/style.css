@@ -1169,6 +1169,13 @@ tr:hover { background: rgba(30,77,61,0.03); }
   font-weight: 600;
 }
 
+/* === Button Group === */
+.btn-group {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 /* === Form Row === */
 .form-row {
   display: grid;
