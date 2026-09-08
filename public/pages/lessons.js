@@ -163,9 +163,18 @@ function showAddLessonModal() {
   `);
   openModal('lessonModal');
 
+  const currGroup = document.getElementById('groupFilter')?.value || '';
+  const currSubject = document.getElementById('subjectFilter')?.value || '';
+
   Promise.all([apiGet('/groups'), apiGet('/subjects')]).then(([groups, subjects]) => {
     fillSelect('lGroupId', groups, 'id', 'name');
     fillSelect('lSubjectId', subjects, 'id', 'name');
+    document.getElementById('lDate').value = new Date().toISOString().split('T')[0];
+    if (currGroup) document.getElementById('lGroupId').value = currGroup;
+    if (currSubject) {
+      document.getElementById('lSubjectId').value = currSubject;
+      loadLessonTopics();
+    }
   });
 
   document.getElementById('lessonForm').addEventListener('submit', async (e) => {

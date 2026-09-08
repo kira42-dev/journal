@@ -8,11 +8,27 @@ router.get('/', (req, res) => {
   try {
     let query = 'SELECT *, (lecture_hours + practice_hours) AS total_hours FROM subjects';
     const params = [];
+    const conditions = [];
     if (req.query.college_id) {
-      query += ' WHERE college_id = ?';
+      conditions.push('college_id = ?');
       params.push(req.query.college_id);
     }
-    query += ' ORDER BY id';
+    if (req.query.semester) {
+      conditions.push('semester = ?');
+      params.push(req.query.semester);
+    }
+    if (req.query.course) {
+      conditions.push('course = ?');
+      params.push(req.query.course);
+    }
+    if (req.query.assessment_type) {
+      conditions.push('assessment_type = ?');
+      params.push(req.query.assessment_type);
+    }
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+    query += ' ORDER BY course, semester, id';
     const subjects = db.prepare(query).all(...params);
     res.json(subjects);
   } catch (err) {
@@ -34,7 +50,7 @@ router.get('/:id', (req, res) => {
 
 router.post('/', requireTeacher, (req, res) => {
   try {
-    const { college_id, name, lecture_hours, practice_hours } = req.body;
+    const { college_id, name, lecture_hours, practice_hours, semester, course, assessment_type } = req.body;
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Название предмета обязательно' });
     }
@@ -47,8 +63,11 @@ router.post('/', requireTeacher, (req, res) => {
     if (lh < 0 || ph < 0) {
       return res.status(400).json({ error: 'Часы не могут быть отрицательными' });
     }
-    const result = db.prepare('INSERT INTO subjects (college_id, name, lecture_hours, practice_hours) VALUES (?, ?, ?, ?)').run(college_id, name.trim(), lh, ph);
-    res.status(201).json({ id: result.lastInsertRowid, college_id, name: name.trim(), lecture_hours: lh, practice_hours: ph, total_hours: lh + ph });
+    const semesterNum = Number(semester) || 1;
+    const courseNum = Number(course) || 1;
+    const assessment = ['exam', 'zachet'].includes(assessment_type) ? assessment_type : 'zachet';
+    const result = db.prepare('INSERT INTO subjects (college_id, name, lecture_hours, practice_hours, semester, course, assessment_type) VALUES (?, ?, ?, ?, ?, ?, ?)').run(college_id, name.trim(), lh, ph, semesterNum, courseNum, assessment);
+    res.status(201).json({ id: result.lastInsertRowid, college_id, name: name.trim(), lecture_hours: lh, practice_hours: ph, total_hours: lh + ph, semester: semesterNum, course: courseNum, assessment_type: assessment });
   } catch (err) {
     res.status(500).json({ error: 'Ошибка сервера' });
   }
@@ -60,7 +79,7 @@ router.put('/:id', requireTeacher, (req, res) => {
     if (!existing) {
       return res.status(404).json({ error: 'Предмет не найден' });
     }
-    const { name, college_id, lecture_hours, practice_hours } = req.body;
+    const { name, college_id, lecture_hours, practice_hours, semester, course, assessment_type } = req.body;
     const lh = lecture_hours !== undefined ? Number(lecture_hours) : undefined;
     const ph = practice_hours !== undefined ? Number(practice_hours) : undefined;
 
@@ -74,6 +93,9 @@ router.put('/:id', requireTeacher, (req, res) => {
     if ((lh !== undefined && lh < 0) || (ph !== undefined && ph < 0)) {
       return res.status(400).json({ error: 'Часы не могут быть отрицательными' });
     }
+    if (assessment_type !== undefined && !['exam', 'zachet'].includes(assessment_type)) {
+      return res.status(400).json({ error: 'assessment_type должен быть exam или zachet' });
+    }
 
     const updates = [];
     const params = [];
@@ -81,6 +103,9 @@ router.put('/:id', requireTeacher, (req, res) => {
     if (college_id !== undefined) { updates.push('college_id = ?'); params.push(college_id); }
     if (lh !== undefined) { updates.push('lecture_hours = ?'); params.push(lh); }
     if (ph !== undefined) { updates.push('practice_hours = ?'); params.push(ph); }
+    if (semester !== undefined) { updates.push('semester = ?'); params.push(Number(semester)); }
+    if (course !== undefined) { updates.push('course = ?'); params.push(Number(course)); }
+    if (assessment_type !== undefined) { updates.push('assessment_type = ?'); params.push(assessment_type); }
 
     if (updates.length === 0) {
       return res.status(400).json({ error: 'Нет полей для обновления' });
