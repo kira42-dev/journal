@@ -3,7 +3,11 @@ async function renderTopics(container) {
   const role = getRole();
   let html = '<div class="toolbar"><h2>Темы</h2>';
   if (role === 'teacher') {
+    html += '<div style="display:flex;gap:8px">';
+    html += '<button class="btn btn-outline" onclick="exportFile(\'/export/topics\', \'topics.xlsx\')">Экспорт</button>';
+    html += '<button class="btn btn-outline" onclick="showImportModal({url:\'/import/topics\', reload:()=>renderTopics(document.getElementById(\'mainContent\')), columns:[\'Тема\',\'Предмет\',\'Порядок\']})">Импорт</button>';
     html += '<button class="btn btn-primary" onclick="showAddTopicModal()">Добавить тему</button>';
+    html += '</div>';
   }
   html += '</div>';
 

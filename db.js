@@ -75,7 +75,39 @@ db.exec(`
     student_id INTEGER REFERENCES students(id) ON DELETE SET NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS exam_tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    subject_id INTEGER NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+    ticket_number INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS exam_questions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id INTEGER NOT NULL REFERENCES exam_tickets(id) ON DELETE CASCADE,
+    question_number INTEGER NOT NULL DEFAULT 1,
+    question_text TEXT NOT NULL
+  );
 `);
+
+// --- Migrations for existing databases (add columns safely) ---
+function columnExists(table, column) {
+  return db.prepare(`PRAGMA table_info(${table})`).all().some(c => c.name === column);
+}
+
+function migrateSubjects() {
+  const cols = db.prepare('PRAGMA table_info(subjects)').all().map(c => c.name);
+  if (!cols.includes('semester')) {
+    db.exec('ALTER TABLE subjects ADD COLUMN semester INTEGER NOT NULL DEFAULT 1');
+  }
+  if (!cols.includes('course')) {
+    db.exec('ALTER TABLE subjects ADD COLUMN course INTEGER NOT NULL DEFAULT 1');
+  }
+  if (!cols.includes('assessment_type')) {
+    db.exec("ALTER TABLE subjects ADD COLUMN assessment_type TEXT NOT NULL DEFAULT 'zachet'");
+  }
+}
+migrateSubjects();
 
 const collegeCount = db.prepare('SELECT COUNT(*) AS cnt FROM colleges').get();
 if (collegeCount.cnt === 0) {

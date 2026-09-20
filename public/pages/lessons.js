@@ -174,6 +174,15 @@ async function showAddLessonModal() {
   document.getElementById('lSubjectId').addEventListener('change', loadLessonTopics);
   openModal('lessonModal');
 
+document.getElementById('lDate').value = new Date().toISOString().split('T')[0];
+  const currGroup = document.getElementById('groupFilter')?.value || '';
+  const currSubject = document.getElementById('subjectFilter')?.value || '';
+  if (currGroup) document.getElementById('lGroupId').value = currGroup;
+  if (currSubject) {
+    document.getElementById('lSubjectId').value = currSubject;
+    loadLessonTopics();
+  }
+  openModal('lessonModal');
   document.getElementById('lessonForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const data = {
