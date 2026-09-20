@@ -23,6 +23,7 @@ const lessonsRoutes = require('./routes/lessons');
 const gradesRoutes = require('./routes/grades');
 const usersRoutes = require('./routes/users');
 const reportsRoutes = require('./routes/reports');
+const exportRoutes = require('./routes/export');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/colleges', verifyToken, collegesRoutes);
@@ -34,6 +35,7 @@ app.use('/api/lessons', verifyToken, lessonsRoutes);
 app.use('/api/grades', verifyToken, gradesRoutes);
 app.use('/api/users', verifyToken, usersRoutes);
 app.use('/api/reports', verifyToken, reportsRoutes);
+app.use('/api/export', verifyToken, exportRoutes);
 
 // SPA fallback
 app.get('*', (req, res) => {

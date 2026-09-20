@@ -123,7 +123,15 @@ async function loadHoursRemaining(groupId, subjectId) {
   }
 }
 
-function showAddLessonModal() {
+async function showAddLessonModal() {
+  let groups, subjects;
+  try {
+    [groups, subjects] = await Promise.all([apiGet('/groups'), apiGet('/subjects')]);
+  } catch (err) {
+    alert(err.error || 'Не удалось загрузить данные');
+    return;
+  }
+
   createModal('lessonModal', 'Добавить занятие', `
     <form id="lessonForm">
       <div class="form-group">
@@ -132,7 +140,7 @@ function showAddLessonModal() {
       </div>
       <div class="form-group">
         <label>Предмет</label>
-        <select id="lSubjectId" required onchange="loadLessonTopics()"></select>
+        <select id="lSubjectId" required></select>
       </div>
       <div class="form-group">
         <label>Тема</label>
@@ -161,12 +169,10 @@ function showAddLessonModal() {
       </div>
     </form>
   `);
+  fillSelect('lGroupId', groups, 'id', 'name');
+  fillSelect('lSubjectId', subjects, 'id', 'name');
+  document.getElementById('lSubjectId').addEventListener('change', loadLessonTopics);
   openModal('lessonModal');
-
-  Promise.all([apiGet('/groups'), apiGet('/subjects')]).then(([groups, subjects]) => {
-    fillSelect('lGroupId', groups, 'id', 'name');
-    fillSelect('lSubjectId', subjects, 'id', 'name');
-  });
 
   document.getElementById('lessonForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -189,76 +195,86 @@ function showAddLessonModal() {
   });
 }
 
-function showEditLessonModal(id) {
-  apiGet(`/lessons/${id}`).then(lesson => {
-    createModal('lessonModal', 'Редактировать занятие', `
-      <form id="lessonForm">
-        <div class="form-group">
-          <label>Группа</label>
-          <select id="lGroupId" required></select>
-        </div>
-        <div class="form-group">
-          <label>Предмет</label>
-          <select id="lSubjectId" required onchange="loadLessonTopics()"></select>
-        </div>
-        <div class="form-group">
-          <label>Тема</label>
-          <select id="lTopicId"><option value="">— Без темы —</option></select>
-        </div>
-        <div class="form-group">
-          <label>Дата</label>
-          <input type="date" id="lDate" value="${lesson.lesson_date}" required>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Часы</label>
-            <input type="number" id="lHours" step="0.5" min="0.5" value="${lesson.hours}" required>
-          </div>
-          <div class="form-group">
-            <label>Тип</label>
-            <select id="lType" required>
-              <option value="lecture" ${lesson.lesson_type === 'lecture' ? 'selected' : ''}>Лекция</option>
-              <option value="practice" ${lesson.lesson_type === 'practice' ? 'selected' : ''}>Практика</option>
-            </select>
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-outline" onclick="closeModal('lessonModal')">Отмена</button>
-          <button type="submit" class="btn btn-primary">Сохранить</button>
-        </div>
-      </form>
-    `);
-    openModal('lessonModal');
+async function showEditLessonModal(id) {
+  let lesson, groups, subjects;
+  try {
+    [lesson, [groups, subjects]] = await Promise.all([
+      apiGet(`/lessons/${id}`),
+      Promise.all([apiGet('/groups'), apiGet('/subjects')])
+    ]);
+  } catch (err) {
+    alert(err.error || 'Ошибка');
+    return;
+  }
 
-    Promise.all([apiGet('/groups'), apiGet('/subjects')]).then(([groups, subjects]) => {
-      fillSelect('lGroupId', groups, 'id', 'name');
-      fillSelect('lSubjectId', subjects, 'id', 'name');
-      document.getElementById('lGroupId').value = lesson.group_id;
-      document.getElementById('lSubjectId').value = lesson.subject_id;
-      loadLessonTopics().then(() => {
-        if (lesson.topic_id) document.getElementById('lTopicId').value = lesson.topic_id;
-      });
-    });
+  const selectedGroups = groups.filter(g => g.id === lesson.group_id);
+  const selectedSubjects = subjects.filter(s => s.id === lesson.subject_id);
 
-    document.getElementById('lessonForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const data = {
-        group_id: Number(document.getElementById('lGroupId').value),
-        subject_id: Number(document.getElementById('lSubjectId').value),
-        topic_id: document.getElementById('lTopicId').value ? Number(document.getElementById('lTopicId').value) : null,
-        lesson_date: document.getElementById('lDate').value,
-        hours: Number(document.getElementById('lHours').value),
-        lesson_type: document.getElementById('lType').value
-      };
-      try {
-        await apiPut(`/lessons/${id}`, data);
-        closeModal('lessonModal');
-        renderLessons(document.getElementById('mainContent'));
-      } catch (err) {
-        alert(err.error || 'Ошибка');
-      }
-    });
-  }).catch(err => alert(err.error || 'Ошибка'));
+  createModal('lessonModal', 'Редактировать занятие', `
+    <form id="lessonForm">
+      <div class="form-group">
+        <label>Группа</label>
+        <select id="lGroupId" required></select>
+      </div>
+      <div class="form-group">
+        <label>Предмет</label>
+        <select id="lSubjectId" required></select>
+      </div>
+      <div class="form-group">
+        <label>Тема</label>
+        <select id="lTopicId"><option value="">— Без темы —</option></select>
+      </div>
+      <div class="form-group">
+        <label>Дата</label>
+        <input type="date" id="lDate" value="${lesson.lesson_date}" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Часы</label>
+          <input type="number" id="lHours" step="0.5" min="0.5" value="${lesson.hours}" required>
+        </div>
+        <div class="form-group">
+          <label>Тип</label>
+          <select id="lType" required>
+            <option value="lecture" ${lesson.lesson_type === 'lecture' ? 'selected' : ''}>Лекция</option>
+            <option value="practice" ${lesson.lesson_type === 'practice' ? 'selected' : ''}>Практика</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal('lessonModal')">Отмена</button>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+      </div>
+    </form>
+  `);
+  fillSelect('lGroupId', groups, 'id', 'name');
+  fillSelect('lSubjectId', subjects, 'id', 'name');
+  document.getElementById('lGroupId').value = lesson.group_id;
+  document.getElementById('lSubjectId').value = lesson.subject_id;
+  document.getElementById('lSubjectId').addEventListener('change', loadLessonTopics);
+  openModal('lessonModal');
+
+  await loadLessonTopics();
+  if (lesson.topic_id) document.getElementById('lTopicId').value = lesson.topic_id;
+
+  document.getElementById('lessonForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+      group_id: Number(document.getElementById('lGroupId').value),
+      subject_id: Number(document.getElementById('lSubjectId').value),
+      topic_id: document.getElementById('lTopicId').value ? Number(document.getElementById('lTopicId').value) : null,
+      lesson_date: document.getElementById('lDate').value,
+      hours: Number(document.getElementById('lHours').value),
+      lesson_type: document.getElementById('lType').value
+    };
+    try {
+      await apiPut(`/lessons/${id}`, data);
+      closeModal('lessonModal');
+      renderLessons(document.getElementById('mainContent'));
+    } catch (err) {
+      alert(err.error || 'Ошибка');
+    }
+  });
 }
 
 async function loadLessonTopics() {

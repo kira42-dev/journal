@@ -38,36 +38,55 @@ async function apiFetch(url, options = {}) {
 
   const res = await fetch(`${API_BASE}${url}`, { ...options, headers });
 
-  if (res.status === 401 || res.status === 403) {
-    if (res.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = 'index.html';
-    }
-    const err = await res.json().catch(() => ({ error: 'Доступ запрещён' }));
-    throw err;
+  if (res.status === 401) {
+    localStorage.removeItem('token');
+    window.location.href = 'index.html';
   }
 
-  return res;
+  const contentType = res.headers.get('Content-Type') || '';
+  const isJson = contentType.includes('application/json');
+  const data = isJson ? await res.json().catch(() => null) : (res.status < 400 ? await res.text().catch(() => null) : null);
+
+  if (!res.ok) {
+    const errData = data || {};
+    if (res.status === 403) errData.forbidden = true;
+    throw errData;
+  }
+
+  return data;
 }
 
 async function apiGet(url) {
-  const res = await apiFetch(url);
+  const res = await fetch(`${API_BASE}${url}`, {
+    headers: tokenHeaders()
+  });
+  if (!res.ok) throw await parseError(res);
   return res.json();
 }
 
 async function apiPost(url, data) {
-  const res = await apiFetch(url, { method: 'POST', body: JSON.stringify(data) });
-  return res.json();
+  return apiFetch(url, { method: 'POST', body: JSON.stringify(data) });
 }
 
 async function apiPut(url, data) {
-  const res = await apiFetch(url, { method: 'PUT', body: JSON.stringify(data) });
-  return res.json();
+  return apiFetch(url, { method: 'PUT', body: JSON.stringify(data) });
 }
 
 async function apiDelete(url) {
-  const res = await apiFetch(url, { method: 'DELETE' });
-  return res.json();
+  return apiFetch(url, { method: 'DELETE' });
+}
+
+function tokenHeaders() {
+  const headers = {};
+  const token = getToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
+
+async function parseError(res) {
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 403) data.forbidden = true;
+  return data;
 }
 
 function showError(msg) {
@@ -131,14 +150,16 @@ function renderSidebar() {
       { label: 'Занятия', page: 'lessons' },
       { label: 'Журнал', page: 'grades' },
       { label: 'Отчёты', page: 'reports' },
-      { label: 'Пользователи', page: 'users' }
+      { label: 'Пользователи', page: 'users' },
+      { label: 'Импорт/Экспорт', page: 'export' }
     ];
   } else if (role === 'headman') {
     items = [
       { label: 'Студенты', page: 'students' },
       { label: 'Занятия', page: 'lessons' },
       { label: 'Журнал', page: 'grades' },
-      { label: 'Отчёты', page: 'reports' }
+      { label: 'Отчёты', page: 'reports' },
+      { label: 'Импорт/Экспорт', page: 'export' }
     ];
   }
 
@@ -188,6 +209,9 @@ async function loadPage(pageName) {
       break;
     case 'users':
       await renderUsers(mainContent);
+      break;
+    case 'export':
+      await renderExport(mainContent);
       break;
     default:
       mainContent.innerHTML = '<h2>Страница не найдена</h2>';

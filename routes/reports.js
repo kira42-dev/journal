@@ -184,6 +184,7 @@ router.get('/debtors', requireHeadmanOrTeacher, (req, res) => {
     for (const s of students) {
       const stats = db.prepare(`
         SELECT COALESCE(AVG(gr.grade), 0) AS avg_grade,
+          COUNT(gr.id) AS grade_count,
           SUM(CASE WHEN gr.presence = 0 THEN 1 ELSE 0 END) AS absences
         FROM students st
         LEFT JOIN grades gr ON st.id = gr.student_id
@@ -193,6 +194,8 @@ router.get('/debtors', requireHeadmanOrTeacher, (req, res) => {
 
       const avgGrade = stats.avg_grade || 0;
       const absences = stats.absences || 0;
+
+      if (stats.grade_count === 0) continue;
 
       if (absences > threshold || avgGrade < minAvg) {
         debtors.push({

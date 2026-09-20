@@ -114,10 +114,11 @@ router.post('/', requireTeacher, (req, res) => {
   try {
     const { group_id, subject_id, topic_id, lesson_date, hours, lesson_type } = req.body;
 
-    if (!group_id || !subject_id || !lesson_date || !hours || !lesson_type) {
+    if (!group_id || !subject_id || !lesson_date || hours === undefined || hours === null || !lesson_type) {
       return res.status(400).json({ error: 'Все обязательные поля должны быть заполнены' });
     }
-    if (hours <= 0) return res.status(400).json({ error: 'Часы должны быть больше 0' });
+    const parsedHours = Number(hours);
+    if (isNaN(parsedHours) || parsedHours <= 0) return res.status(400).json({ error: 'Часы должны быть больше 0' });
     if (!['lecture', 'practice'].includes(lesson_type)) {
       return res.status(400).json({ error: 'Тип занятия должен быть lecture или practice' });
     }
@@ -145,8 +146,8 @@ router.post('/', requireTeacher, (req, res) => {
       }
     }
 
-    const result = db.prepare('INSERT INTO lessons (group_id, subject_id, topic_id, lesson_date, hours, lesson_type) VALUES (?, ?, ?, ?, ?, ?)').run(group_id, subject_id, topic_id || null, lesson_date, hours, lesson_type);
-    res.status(201).json({ id: result.lastInsertRowid, group_id, subject_id, topic_id: topic_id || null, lesson_date, hours, lesson_type });
+    const result = db.prepare('INSERT INTO lessons (group_id, subject_id, topic_id, lesson_date, hours, lesson_type) VALUES (?, ?, ?, ?, ?, ?)').run(group_id, subject_id, topic_id || null, lesson_date, parsedHours, lesson_type);
+    res.status(201).json({ id: result.lastInsertRowid, group_id, subject_id, topic_id: topic_id || null, lesson_date, hours: parsedHours, lesson_type });
   } catch (err) {
     res.status(500).json({ error: 'Ошибка сервера' });
   }
